@@ -9,8 +9,23 @@ Multiqueues::Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
     this->numOfThreads = numOfThreads;
     this->numOfQueuesPerThread = numOfQueuesPerThread;
     this->numOfQueues = numOfThreads * numOfQueuesPerThread;
-    internalQueues = new Queues[numOfQueues];
+    internalQueues = new PriorityQueue[numOfQueues];
     locks = new std::mutex[numOfQueues];
+}
+
+void Multiqueues::insertIntoPrime(int insertNum) {
+    while (!primeLock.try_lock());
+    prime.push(insertNum);
+    primeLock.unlock();
+}
+
+int Multiqueues::deleteMaxPrime() {
+    int max;
+    while (!primeLock.try_lock());
+    max = prime.top();
+    prime.pop();
+    primeLock.unlock();
+    return max;
 }
 
 void Multiqueues::insert(int insertNum) {

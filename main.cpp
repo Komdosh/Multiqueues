@@ -21,18 +21,24 @@ void *RunMultiqueueExperiment(void *threadarg) {
 
     start = clock();
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
-        multiqueues->insert(rand() % MAX_INSERTED_NUM);
-        //multiqueues->insertByThreadId(rand() % MAX_INSERTED_NUM, threadData->threadId);
+        int insertedNum = rand() % MAX_INSERTED_NUM;
+        multiqueues->insert(insertedNum);
+        //multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+
+        //multiqueues->insertIntoPrime(insertedNum); //For accuracy experiment
     }
-    cout << "Thread " << threadData->threadId << " finish insert in " << clock() - start << " tick " << endl;
+    cout << "[INSERT] Thread " << threadData->threadId << " finish in " << clock() - start << " tick " << endl;
 
     start = clock();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
-        multiqueues->deleteMax();
-        //multiqueues->deleteMaxByThreadId(threadData->threadId);
-        //multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        int relaxedMax = multiqueues->deleteMax();
+        //int relaxedMax = multiqueues->deleteMaxByThreadId(threadData->threadId);
+        //int relaxedMax = multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+
+        //int primeMax = multiqueues->deleteMaxPrime();
+        //cout << "[MAX] Thread " << threadData->threadId << " relaxed " << relaxedMax << " prime "<< primeMax << " diff " << abs(relaxedMax-primeMax) << endl;
     }
-    cout << "Thread " << threadData->threadId << " finish delete in " << clock() - start << " tick" << endl;
+    cout << "[DELETE] Thread " << threadData->threadId << " finish in " << clock() - start << " tick" << endl;
 
     if (threadData->threadId == 0 && BALANCE) {
         start = clock();

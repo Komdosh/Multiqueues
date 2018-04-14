@@ -13,13 +13,18 @@ public:
     int numOfThreads;
     int numOfQueuesPerThread;
     int numOfQueues;
-    typedef typename boost::heap::d_ary_heap<int, boost::heap::mutable_<true>, boost::heap::arity<2>> Queues;
-    Queues *internalQueues;
+    typedef typename boost::heap::d_ary_heap<int, boost::heap::mutable_<true>, boost::heap::arity<2>> PriorityQueue;
+    PriorityQueue *internalQueues;
+    PriorityQueue prime;
     std::mutex *locks;
+    std::mutex primeLock;
 
     Multiqueues();
     Multiqueues(int numOfThreads, int numOfQueuesPerThread);
 
+    void insertIntoPrime(int insertNum);
+
+    int deleteMaxPrime();
     void insert(int insertNum);
     void insertByThreadId(int insertNum, int threadId);
     int deleteMax();
