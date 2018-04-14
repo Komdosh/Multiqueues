@@ -21,7 +21,16 @@ public:
     Multiqueues(int numOfThreads, int numOfQueuesPerThread);
 
     void insert(int insertNum);
+    void insertByThreadId(int insertNum, int threadId);
     int deleteMax();
+    int deleteMaxByThreadId(int threadId);
+    int deleteMaxByThreadOwn(int threadId);
+
+    int getRandomQueueIndexForHalf() const;
+
+    int getQueIndexForDelete(int queueIndex, int secondQueueIndex) const;
+
+    void printSize();
 };
 
 
