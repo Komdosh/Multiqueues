@@ -4,6 +4,7 @@
 
 #include "Multiqueues.h"
 #include <iostream>
+
 Multiqueues::Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
     this->numOfThreads = numOfThreads;
     this->numOfQueuesPerThread = numOfQueuesPerThread;
@@ -29,7 +30,7 @@ void Multiqueues::insertByThreadId(int insertNum, int threadId) {
         if (threadId < halfOfThreads) {
             queueIndex = getRandomQueueIndexForHalf();
         } else {
-            queueIndex = getRandomQueueIndexForHalf() + this->numOfQueues/2;
+            queueIndex = getRandomQueueIndexForHalf() + this->numOfQueues / 2;
         }
     } while (!locks[queueIndex].try_lock());
     internalQueues[queueIndex].push(insertNum);
@@ -62,8 +63,8 @@ int Multiqueues::deleteMaxByThreadId(int threadId) {
             queueIndex = getRandomQueueIndexForHalf();
             secondQueueIndex = getRandomQueueIndexForHalf();
         } else {
-            queueIndex = getRandomQueueIndexForHalf() + this->numOfQueues/2;
-            secondQueueIndex = getRandomQueueIndexForHalf() + this->numOfQueues/2;
+            queueIndex = getRandomQueueIndexForHalf() + this->numOfQueues / 2;
+            secondQueueIndex = getRandomQueueIndexForHalf() + this->numOfQueues / 2;
         }
 
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
@@ -102,15 +103,6 @@ int Multiqueues::deleteMaxByThreadOwn(int threadId) {
     return topValue;
 }
 
-void Multiqueues::printSize() {
-    int over = 0;
-    for (int i = 0; i < this->numOfQueues; ++i) {
-        over+=internalQueues[i].size();
-        std::cout << internalQueues[i].size() << std::endl;
-    }
-    std::cout<< "over: "<< over<<std::endl;
-}
-
 int Multiqueues::getQueIndexForDelete(int queueIndex, int secondQueueIndex) const {
     if (internalQueues[queueIndex].empty() && internalQueues[secondQueueIndex].empty()) {
         return -1;
@@ -125,6 +117,42 @@ int Multiqueues::getQueIndexForDelete(int queueIndex, int secondQueueIndex) cons
         return -1;
     }
     return queueIndex;
+}
+
+void Multiqueues::printSize() {
+    for (int i = 0; i < this->numOfQueues; ++i) {
+        std::cout << "Queue " << i << " has size " << internalQueues[i].size() << std::endl;
+    }
+};
+
+void Multiqueues::balance() {
+    int sumOfSizes = 0;
+    int sizes[this->numOfQueues] = {0};
+    int indexWithMax = 0, indexWithMin = 0;
+    for (int i = 0; i < this->numOfQueues; ++i) {
+        sizes[i] = internalQueues[i].size();
+        sumOfSizes += sizes[i];
+        if (sizes[indexWithMax] < sizes[i]) {
+            indexWithMax = i;
+        }
+        if (i == 0 || sizes[indexWithMin] > sizes[i]) {
+            indexWithMin = i;
+        }
+    }
+
+    int averageSize = sumOfSizes / this->numOfQueues; //double is needless
+    std::cout << "Thread 0:" << averageSize << " " << sizes[indexWithMax] << " " << sizes[indexWithMin] << std::endl;
+    if (sizes[indexWithMax] > averageSize * 1.2) { // if max sized queue is 20% bigger and more than average
+        while (!locks[indexWithMax].try_lock());
+        while (!locks[indexWithMin].try_lock());
+        int sizeOfTransfer = static_cast<int>(sizes[indexWithMax] * 0.3); // 30% elements transfer to smallest queue
+        for (int i = 0; i < sizeOfTransfer; ++i) {
+            internalQueues[indexWithMin].push(internalQueues[indexWithMax].top());
+            internalQueues[indexWithMax].pop();
+        }
+        locks[indexWithMax].unlock();
+        locks[indexWithMin].unlock();
+    }
 }
 
 int Multiqueues::getRandomQueueIndexForHalf() const { return rand() % (this->numOfQueues / 2); }

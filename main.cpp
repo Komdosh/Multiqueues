@@ -4,6 +4,7 @@
 #define MAX_INSERTED_NUM 1000000
 #define INSERT_PER_THREAD 1000000
 #define DELETE_PER_THREAD 500000
+#define BALANCE 0
 
 using namespace std;
 
@@ -17,8 +18,8 @@ void *RunMultiqueueExperiment(void *threadarg) {
     struct threadData *threadData;
     threadData = (struct threadData *) threadarg;
     clock_t start;
-    start = clock();
 
+    start = clock();
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
         multiqueues->insert(rand() % MAX_INSERTED_NUM);
         //multiqueues->insertByThreadId(rand() % MAX_INSERTED_NUM, threadData->threadId);
@@ -32,6 +33,13 @@ void *RunMultiqueueExperiment(void *threadarg) {
         //multiqueues->deleteMaxByThreadOwn(threadData->threadId);
     }
     cout << "Thread " << threadData->threadId << " finish delete in " << clock() - start << " tick" << endl;
+
+    if (threadData->threadId == 0 && BALANCE) {
+        start = clock();
+        multiqueues->balance();
+        cout << "Thread " << threadData->threadId << " finish balance in " << clock() - start << " tick" << endl;
+    }
+
     pthread_exit(nullptr);
 }
 

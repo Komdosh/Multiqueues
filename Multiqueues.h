@@ -31,6 +31,8 @@ public:
     int getQueIndexForDelete(int queueIndex, int secondQueueIndex) const;
 
     void printSize();
+
+    void balance();
 };
 
 
