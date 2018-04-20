@@ -2,10 +2,11 @@
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
-#define INSERT_PER_THREAD 10000000
+#define INSERT_PER_THREAD 1000000
 #define DELETE_PER_THREAD 500000
 #define BALANCE 0
 #define CPU_FRQ 2.5E9
+#define CORES 4
 
 using namespace std;
 
@@ -53,10 +54,12 @@ void *RunMultiqueueExperiment(void *threadarg) {
 }
 
 int main(int argc, char *argv[]) {
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    for (int i = 0; i < 4; i++)
-        CPU_SET(i, &cpuset);
+    cpu_set_t cpuset[CORES];
+
+    for (int i = 0; i < CORES; i++) {
+        CPU_ZERO(&cpuset[i]);
+        CPU_SET(i, &cpuset[i]);
+    }
 
     int numOfThreads = atoi(argv[1]);
     int numOfQueuesPerThread = atoi(argv[2]);
@@ -67,7 +70,7 @@ int main(int argc, char *argv[]) {
         td[i].threadId = i;
         int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
-        int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset);
+        int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
         if (s != 0) {
             printf("Thread %d affinities was not set", i);
             pthread_exit(nullptr);

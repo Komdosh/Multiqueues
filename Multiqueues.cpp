@@ -141,7 +141,6 @@ void Multiqueues::balance() {
     }
 
     int averageSize = sumOfSizes / this->numOfQueues; //double is needless
-    std::cout << "Thread 0:" << averageSize << " " << sizes[indexWithMax] << " " << sizes[indexWithMin] << std::endl;
     if (sizes[indexWithMax] > averageSize * 1.2) { // if max sized queue is 20% bigger and more than average
         while (!locks[indexWithMax].try_lock());
         while (!locks[indexWithMin].try_lock());
