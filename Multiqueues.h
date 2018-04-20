@@ -13,9 +13,9 @@ public:
     int numOfThreads;
     int numOfQueuesPerThread;
     int numOfQueues;
+    unsigned int *seed = new unsigned int[1];
     typedef typename boost::heap::d_ary_heap<int, boost::heap::mutable_<true>, boost::heap::arity<2>> PriorityQueue;
     PriorityQueue *internalQueues;
-    PriorityQueue prime;
     std::mutex *locks;
     std::mutex primeLock;
 
@@ -33,9 +33,13 @@ public:
 
     int getRandomQueueIndexForHalf() const;
 
+    int getRandomQueueIndex() const;
+
     int getQueIndexForDelete(int queueIndex, int secondQueueIndex) const;
 
     void printSize();
+
+    long getSize();
 
     void balance();
 };

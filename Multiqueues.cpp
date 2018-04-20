@@ -13,25 +13,10 @@ Multiqueues::Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
     locks = new std::mutex[numOfQueues];
 }
 
-void Multiqueues::insertIntoPrime(int insertNum) {
-    while (!primeLock.try_lock());
-    prime.push(insertNum);
-    primeLock.unlock();
-}
-
-int Multiqueues::deleteMaxPrime() {
-    int max;
-    while (!primeLock.try_lock());
-    max = prime.top();
-    prime.pop();
-    primeLock.unlock();
-    return max;
-}
-
 void Multiqueues::insert(int insertNum) {
     int queueIndex;
     do {
-        queueIndex = rand() % this->numOfQueues;
+        queueIndex = getRandomQueueIndex();
     } while (!locks[queueIndex].try_lock());
     internalQueues[queueIndex].push(insertNum);
     locks[queueIndex].unlock();
@@ -56,8 +41,8 @@ int Multiqueues::deleteMax() {
     int queueIndex;
     int secondQueueIndex;
     do {
-        queueIndex = rand() % this->numOfQueues;
-        secondQueueIndex = rand() % this->numOfQueues;
+        queueIndex = getRandomQueueIndex();
+        secondQueueIndex = getRandomQueueIndex();
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
         if (queueIndex == -1) {
             continue;
@@ -103,8 +88,8 @@ int Multiqueues::deleteMaxByThreadOwn(int threadId) {
             secondQueueIndex = threadId * numOfQueuesPerThread + 1;
             ++it;
         } else {
-            queueIndex = rand() % this->numOfQueues;
-            secondQueueIndex = rand() % this->numOfQueues;
+            queueIndex = getRandomQueueIndex();
+            secondQueueIndex = getRandomQueueIndex();
         }
 
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
@@ -170,4 +155,14 @@ void Multiqueues::balance() {
     }
 }
 
-int Multiqueues::getRandomQueueIndexForHalf() const { return rand() % (this->numOfQueues / 2); }
+int Multiqueues::getRandomQueueIndexForHalf() const { return rand_r(this->seed) % (this->numOfQueues / 2); }
+
+int Multiqueues::getRandomQueueIndex() const { return rand_r(this->seed) % this->numOfQueues; }
+
+long Multiqueues::getSize() {
+    long numOfElements = 0;
+    for (int i = 0; i < this->numOfQueues; ++i) {
+        numOfElements += internalQueues[i].size();
+    }
+    return numOfElements;
+}
