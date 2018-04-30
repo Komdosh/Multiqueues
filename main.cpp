@@ -5,7 +5,7 @@
 #define INSERT_PER_THREAD 1000000
 #define DELETE_PER_THREAD 500000
 #define BALANCE 0
-#define CPU_FRQ 2.5E9
+#define CPU_FRQ 1.8E9
 #define CORES 4
 #define NUM_OF_QUEUES_PER_THREAD 2
 
@@ -13,6 +13,7 @@ using namespace std;
 
 struct threadData {
     int threadId;
+    int mode;
 };
 
 Multiqueues *multiqueues;
@@ -32,16 +33,23 @@ void *RunMultiqueueExperiment(void *threadarg) {
     unsigned int seed = 0;
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
         int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
-        //multiqueues->insert(insertedNum);
-        multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+        if (threadData->mode == 0) {
+            multiqueues->insert(insertedNum);
+        } else {
+            multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+        }
     }
     printInfo("INSERT", threadData->threadId, start, INSERT_PER_THREAD);
 
     start = __rdtsc();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
-        //multiqueues->deleteMax();
-        //multiqueues->deleteMaxByThreadId(threadData->threadId);
-        multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        if (threadData->mode == 0) {
+            multiqueues->deleteMax();
+        } else if (threadData->mode == 1) {
+            multiqueues->deleteMaxByThreadId(threadData->threadId);
+        } else {
+            multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        }
     }
     printInfo("DELETE", threadData->threadId, start, DELETE_PER_THREAD);
 
@@ -62,39 +70,42 @@ int main(int argc, char *argv[]) {
         CPU_SET(i, &cpuset[i]);
     }
     int maxThreads = atoi(argv[1]) + 1;
+    cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
+    for (int mode = 0; mode < 3; ++mode) {
+        for (int numOfThreads = 1; numOfThreads < maxThreads; numOfThreads += 2) {
+            cout << "-----------------------------------------------------------------" << endl;
+            cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
+                 << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
+                 << endl;
+            multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
+            pthread_t threads[multiqueues->numOfThreads];
+            struct threadData td[multiqueues->numOfThreads];
+            for (int i = 0; i < multiqueues->numOfThreads; i++) {
+                td[i].threadId = i;
+                td[i].mode = mode;
+                int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
-    for (int numOfThreads = 1; numOfThreads < maxThreads; numOfThreads += 2) {
-        cout << "-----------------------------------------------------------------" << endl;
-        cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread " << NUM_OF_QUEUES_PER_THREAD
-             << endl;
-        multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
-        pthread_t threads[multiqueues->numOfThreads];
-        struct threadData td[multiqueues->numOfThreads];
-        for (int i = 0; i < multiqueues->numOfThreads; i++) {
-            td[i].threadId = i;
-            int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
+                int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
+                if (s != 0) {
+                    printf("Thread %d affinities was not set", i);
+                    pthread_exit(nullptr);
+                }
 
-            int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
-            if (s != 0) {
-                printf("Thread %d affinities was not set", i);
-                pthread_exit(nullptr);
+                if (rc) {
+                    cout << "Error: thread wasn't created," << rc << endl;
+                    exit(-1);
+                }
             }
 
-            if (rc) {
-                cout << "Error: thread wasn't created," << rc << endl;
-                exit(-1);
+            for (int i = 0; i < numOfThreads; i++) {
+                pthread_join(threads[i], nullptr);
             }
-        }
 
-        for (int i = 0; i < numOfThreads; i++) {
-            pthread_join(threads[i], nullptr);
-        }
-
-        if (numOfThreads == 1) {
-            numOfThreads = 0;
+            if (numOfThreads == 1) {
+                numOfThreads = 0;
+            }
         }
     }
 
-    CPU_FREE(cpuset);
     pthread_exit(nullptr);
 }
