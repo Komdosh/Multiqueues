@@ -38,9 +38,9 @@ void *RunMultiqueueExperiment(void *threadarg) {
 
     start = __rdtsc();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
-        int relaxedMax = multiqueues->deleteMax();
-        //int relaxedMax = multiqueues->deleteMaxByThreadId(threadData->threadId);
-        //int relaxedMax = multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        multiqueues->deleteMax();
+        //multiqueues->deleteMaxByThreadId(threadData->threadId);
+        //multiqueues->deleteMaxByThreadOwn(threadData->threadId);
     }
     printInfo("DELETE", threadData->threadId, start, DELETE_PER_THREAD);
 
@@ -82,5 +82,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    for (int i = 0; i < numOfThreads; i++) {
+        pthread_join(threads[i], nullptr);
+    }
+
+    delete multiqueues;
+    CPU_FREE(cpuset);
     pthread_exit(nullptr);
 }
