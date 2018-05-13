@@ -87,6 +87,5 @@ int main(int argc, char *argv[]) {
     }
 
     delete multiqueues;
-    CPU_FREE(cpuset);
     pthread_exit(nullptr);
 }
