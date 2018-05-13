@@ -17,14 +17,12 @@ public:
     typedef typename boost::heap::d_ary_heap<int, boost::heap::mutable_<true>, boost::heap::arity<2>> PriorityQueue;
     PriorityQueue *internalQueues;
     std::mutex *locks;
-    std::mutex primeLock;
 
     Multiqueues();
     Multiqueues(int numOfThreads, int numOfQueuesPerThread);
 
-    void insertIntoPrime(int insertNum);
+    ~Multiqueues();
 
-    int deleteMaxPrime();
     void insert(int insertNum);
     void insertByThreadId(int insertNum, int threadId);
     int deleteMax();

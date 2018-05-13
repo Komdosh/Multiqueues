@@ -13,6 +13,14 @@ Multiqueues::Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
     locks = new std::mutex[numOfQueues];
 }
 
+Multiqueues::~Multiqueues() {
+    for (int i = 0; i < numOfQueues; ++i) {
+        internalQueues[i].clear();
+    }
+    delete[] internalQueues;
+    delete[] locks;
+}
+
 void Multiqueues::insert(int insertNum) {
     int queueIndex;
     do {
