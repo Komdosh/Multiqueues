@@ -69,10 +69,12 @@ int main(int argc, char *argv[]) {
         CPU_ZERO(&cpuset[i]);
         CPU_SET(i, &cpuset[i]);
     }
-    int maxThreads = atoi(argv[1]) + 1;
+    int startThreads = atoi(argv[1]);
+    int maxThreads = atoi(argv[2]) + 1;
     cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
-    for (int mode = 0; mode < 3; ++mode) {
-        for (int numOfThreads = 1; numOfThreads < maxThreads; numOfThreads += 2) {
+
+    for (int numOfThreads = startThreads; numOfThreads < maxThreads; numOfThreads += 2) {
+        for (int mode = 0; mode < 3; ++mode) {
             cout << "-----------------------------------------------------------------" << endl;
             cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
                  << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
