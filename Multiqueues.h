@@ -40,6 +40,8 @@ public:
     long getSize();
 
     void balance();
+
+    int getTopValue(int queueIndex) const;
 };
 
 

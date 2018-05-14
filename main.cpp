@@ -12,6 +12,7 @@ using namespace std;
 
 struct threadData {
     int threadId;
+    int mode;
 };
 
 Multiqueues *multiqueues;
@@ -20,7 +21,8 @@ void printInfo(const string &type, int threadId, uint64_t start, long numOfEleme
     double secs = (__rdtsc() - start) / CPU_FRQ;
     //cout << "[" << type << "] Thread " << threadId << " finish in " << secs << " sec" << endl;
     long throughput = static_cast<long>(numOfElement / secs);
-    cout << "[" << type << "] Thread " << threadId << " have " << throughput << " throughput per sec" << endl;
+    cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
+         << " throughput per sec" << endl;
 }
 
 void *RunMultiqueueExperiment(void *threadarg) {
@@ -31,16 +33,23 @@ void *RunMultiqueueExperiment(void *threadarg) {
     unsigned int seed = 0;
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
         int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
-        multiqueues->insert(insertedNum);
-        // multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+        if (threadData->mode == 0) {
+            multiqueues->insert(insertedNum);
+        } else {
+            multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+        }
     }
     printInfo("INSERT", threadData->threadId, start, INSERT_PER_THREAD);
 
     start = __rdtsc();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
-        multiqueues->deleteMax();
-        //multiqueues->deleteMaxByThreadId(threadData->threadId);
-        //multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        if (threadData->mode == 0) {
+            multiqueues->deleteMax();
+        } else if (threadData->mode == 1) {
+            multiqueues->deleteMaxByThreadId(threadData->threadId);
+        } else {
+            multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+        }
     }
     printInfo("DELETE", threadData->threadId, start, DELETE_PER_THREAD);
 
@@ -68,6 +77,7 @@ int main(int argc, char *argv[]) {
     struct threadData td[multiqueues->numOfThreads];
     for (int i = 0; i < multiqueues->numOfThreads; i++) {
         td[i].threadId = i;
+        td[i].mode = 0;
         int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
         int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);

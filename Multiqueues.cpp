@@ -52,12 +52,16 @@ int Multiqueues::deleteMax() {
         queueIndex = getRandomQueueIndex();
         secondQueueIndex = getRandomQueueIndex();
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
-        if (queueIndex == -1) {
-            continue;
-        }
-    } while (!locks[queueIndex].try_lock());
-    int topValue = internalQueues[queueIndex].top();
-    internalQueues[queueIndex].pop();
+    } while (queueIndex == -1 || !locks[queueIndex].try_lock());
+    return getTopValue(queueIndex);
+}
+
+int Multiqueues::getTopValue(int queueIndex) const {
+    int topValue = -1;
+    if (!internalQueues[queueIndex].empty()) {
+        internalQueues[queueIndex].top();
+        internalQueues[queueIndex].pop();
+    }
     locks[queueIndex].unlock();
     return topValue;
 }
@@ -76,14 +80,8 @@ int Multiqueues::deleteMaxByThreadId(int threadId) {
         }
 
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
-        if (queueIndex == -1) {
-            continue;
-        }
-    } while (!locks[queueIndex].try_lock());
-    int topValue = internalQueues[queueIndex].top();
-    internalQueues[queueIndex].pop();
-    locks[queueIndex].unlock();
-    return topValue;
+    } while (queueIndex == -1 || !locks[queueIndex].try_lock());
+    return getTopValue(queueIndex);
 }
 
 int Multiqueues::deleteMaxByThreadOwn(int threadId) {
@@ -101,14 +99,8 @@ int Multiqueues::deleteMaxByThreadOwn(int threadId) {
         }
 
         queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
-        if (queueIndex == -1) {
-            continue;
-        }
-    } while (!locks[queueIndex].try_lock());
-    int topValue = internalQueues[queueIndex].top();
-    internalQueues[queueIndex].pop();
-    locks[queueIndex].unlock();
-    return topValue;
+    } while (queueIndex == -1 || !locks[queueIndex].try_lock());
+    return getTopValue(queueIndex);
 }
 
 int Multiqueues::getQueIndexForDelete(int queueIndex, int secondQueueIndex) const {
@@ -116,9 +108,20 @@ int Multiqueues::getQueIndexForDelete(int queueIndex, int secondQueueIndex) cons
         return -1;
     } else if (internalQueues[queueIndex].empty() && !internalQueues[secondQueueIndex].empty()) {
         queueIndex = secondQueueIndex;
-    } else if (!internalQueues[secondQueueIndex].empty() &&
-               internalQueues[queueIndex].top() > internalQueues[secondQueueIndex].top()) {
-        queueIndex = secondQueueIndex;
+    } else {
+        while (!locks[queueIndex].try_lock());
+        int value = -1;
+        if (!internalQueues[secondQueueIndex].empty())
+            value = internalQueues[secondQueueIndex].top();
+        locks[queueIndex].unlock();
+        while (!locks[secondQueueIndex].try_lock());
+        int value2 = -1;
+        if (!internalQueues[secondQueueIndex].empty())
+            value2 = internalQueues[secondQueueIndex].top();
+        locks[secondQueueIndex].unlock();
+        if (value2 > value) {
+            queueIndex = secondQueueIndex;
+        }
     }
 
     if (queueIndex != -1 && internalQueues[queueIndex].empty()) {
