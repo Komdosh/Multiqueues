@@ -8,6 +8,7 @@
 #define CPU_FRQ 1.8E9
 #define CORES 4
 #define NUM_OF_QUEUES_PER_THREAD 2
+#define NUM_OF_EXPERIMENT 3
 
 using namespace std;
 
@@ -22,7 +23,8 @@ void printInfo(const string &type, int threadId, uint64_t start, long numOfEleme
     double secs = (__rdtsc() - start) / CPU_FRQ;
     //cout << "[" << type << "] Thread " << threadId << " finish in " << secs << " sec" << endl;
     long throughput = static_cast<long>(numOfElement / secs);
-    cout << "[" << type << "] Thread " << threadId << " have " << throughput << " throughput per sec" << endl;
+    cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
+         << " throughput per sec" << endl;
 }
 
 void *RunMultiqueueExperiment(void *threadarg) {
@@ -74,38 +76,40 @@ int main(int argc, char *argv[]) {
     cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
 
     for (int numOfThreads = startThreads; numOfThreads < maxThreads; numOfThreads += 2) {
-        for (int mode = 0; mode < 3; ++mode) {
-            cout << "-----------------------------------------------------------------" << endl;
-            cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
-                 << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
-                 << endl;
-            multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
-            pthread_t threads[multiqueues->numOfThreads];
-            struct threadData td[multiqueues->numOfThreads];
-            for (int i = 0; i < multiqueues->numOfThreads; i++) {
-                td[i].threadId = i;
-                td[i].mode = mode;
-                int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
+        for (int mode = 1; mode < 3; ++mode) {
+            for (int it = 0; it < NUM_OF_EXPERIMENT; ++it) {
+                cout << "-----------------------------------------------------------------" << endl;
+                cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
+                     << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
+                     << " | Iteration " << it
+                     << endl;
+                multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
+                pthread_t threads[multiqueues->numOfThreads];
+                struct threadData td[multiqueues->numOfThreads];
+                for (int i = 0; i < multiqueues->numOfThreads; i++) {
+                    td[i].threadId = i;
+                    td[i].mode = mode;
+                    int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
-                int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
-                if (s != 0) {
-                    printf("Thread %d affinities was not set", i);
-                    pthread_exit(nullptr);
+                    int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
+                    if (s != 0) {
+                        printf("Thread %d affinities was not set", i);
+                        pthread_exit(nullptr);
+                    }
+
+                    if (rc) {
+                        cout << "Error: thread wasn't created," << rc << endl;
+                        exit(-1);
+                    }
                 }
 
-                if (rc) {
-                    cout << "Error: thread wasn't created," << rc << endl;
-                    exit(-1);
+                for (int i = 0; i < numOfThreads; i++) {
+                    pthread_join(threads[i], nullptr);
                 }
             }
-
-            for (int i = 0; i < numOfThreads; i++) {
-                pthread_join(threads[i], nullptr);
-            }
-
-            if (numOfThreads == 1) {
-                numOfThreads = 0;
-            }
+        }
+        if (numOfThreads == 1) {
+            numOfThreads = 0;
         }
     }
 
