@@ -111,8 +111,8 @@ int Multiqueues::getQueIndexForDelete(int queueIndex, int secondQueueIndex) cons
     } else {
         while (!locks[queueIndex].try_lock());
         int value = -1;
-        if (!internalQueues[secondQueueIndex].empty())
-            value = internalQueues[secondQueueIndex].top();
+        if (!internalQueues[queueIndex].empty())
+            value = internalQueues[queueIndex].top();
         locks[queueIndex].unlock();
         while (!locks[secondQueueIndex].try_lock());
         int value2 = -1;
