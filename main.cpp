@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
                 for (int i = 0; i < numOfThreads; i++) {
                     pthread_join(threads[i], nullptr);
                 }
+                delete multiqueues;
             }
         }
         if (numOfThreads == 1) {
