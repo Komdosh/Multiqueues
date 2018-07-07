@@ -8,7 +8,6 @@
 #define BALANCE 0
 #define CPU_FRQ 1.8E9
 #define CORES 24
-#define NUM_OF_QUEUES_PER_THREAD 2
 #define NUM_OF_EXPERIMENT 3
 
 using namespace std;
@@ -80,19 +79,19 @@ int main(int argc, char *argv[]) {
         CPU_ZERO(&cpuset[i]);
         CPU_SET(i, &cpuset[i]);
     }
-    int startThreads = atoi(argv[1]);
-    int maxThreads = atoi(argv[2]) + 1;
-    cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
-    for (int numOfThreads = startThreads; numOfThreads < maxThreads; numOfThreads += 2) {
+    int startQueues = atoi(argv[1]);
+    int maxQueues = atoi(argv[2]) + 1;
+    cout << "[INFO START] Max queues " << maxQueues - 1 << endl;
+    for (int numOfQueues = startQueues; numOfQueues < maxQueues; numOfQueues += 2) {
         for (int mode = 0; mode < 3; ++mode) {
             long throughputDeleteSum = 0;
             long throughputInsertSum = 0;
             cout << "-----------------------------------------------------------------" << endl;
-            cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
-                 << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
+            cout << "[INFO] Num of threads " << CORES << " | Num of queues per thread "
+                 << numOfQueues << " | mode " << mode
                  << endl;
             for (int it = 0; it < NUM_OF_EXPERIMENT; ++it) {
-                multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
+                multiqueues = new Multiqueues(CORES, numOfQueues);
                 pthread_t threads[multiqueues->numOfThreads];
                 struct threadData td[multiqueues->numOfThreads];
                 throughputsDelete = new long[multiqueues->numOfThreads];
@@ -114,7 +113,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                for (int i = 0; i < numOfThreads; i++) {
+                for (int i = 0; i < CORES; i++) {
                     pthread_join(threads[i], nullptr);
                     throughputDeleteSum += throughputsDelete[i];
                     throughputInsertSum += throughputsInsert[i];
@@ -129,8 +128,8 @@ int main(int argc, char *argv[]) {
             cout << "[INSERT] SUM THROUGHPUT: " << throughputInsertSum / NUM_OF_EXPERIMENT << endl;
             cout << "[DELETE] SUM THROUGHPUT: " << throughputDeleteSum / NUM_OF_EXPERIMENT << endl;
         }
-        if (numOfThreads == 1) {
-            numOfThreads = 0;
+        if (numOfQueues == 1) {
+            numOfQueues = 0;
         }
     }
 
