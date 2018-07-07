@@ -3,8 +3,7 @@
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
-#define INSERT_PER_THREAD 1000000
-#define DELETE_PER_THREAD 500000
+#define OPERATIONS_PER_THREAD 1500000
 #define BALANCE 0
 #define CPU_FRQ 1.8E9
 #define CORES 24
@@ -19,8 +18,7 @@ struct threadData {
 };
 
 Multiqueues *multiqueues;
-long *throughputsInsert;
-long *throughputsDelete;
+long *throughputsRandom;
 
 void printInfo(const string &type, int threadId, uint64_t start, long numOfElement) {
     double secs = (__rdtsc() - start) / CPU_FRQ;
@@ -28,41 +26,45 @@ void printInfo(const string &type, int threadId, uint64_t start, long numOfEleme
     long throughput = static_cast<long>(numOfElement / secs);
 /*    cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
          << " throughput per sec" << endl;*/
-    if (type == "DELETE") {
-        throughputsDelete[threadId] = throughput;
-    } else if (type == "INSERT") {
-        throughputsInsert[threadId] = throughput;
+    if (type == "RANDOM") {
+        throughputsRandom[threadId] = throughput;
     }
-
 }
 
 void *RunMultiqueueExperiment(void *threadarg) {
     struct threadData *threadData;
     threadData = (struct threadData *) threadarg;
-    uint64_t start = __rdtsc();
 
     unsigned int seed = 0;
-    for (int i = 0; i < INSERT_PER_THREAD; ++i) {
+    for (int i = 0; i < OPERATIONS_PER_THREAD; ++i) {
         int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
-        if (threadData->mode == 0) {
-            multiqueues->insert(insertedNum);
-        } else {
-            multiqueues->insertByThreadId(insertedNum, threadData->threadId);
-        }
+        multiqueues->insertByThreadId(insertedNum, threadData->threadId);
     }
-    printInfo("INSERT", threadData->threadId, start, INSERT_PER_THREAD);
 
-    start = __rdtsc();
-    for (int i = 0; i < DELETE_PER_THREAD; ++i) {
+    uint64_t start = __rdtsc();
+
+
+    for (int i = 0; i < OPERATIONS_PER_THREAD; ++i) {
+        int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
+        int mode = rand_r(&seed) % 2;
         if (threadData->mode == 0) {
-            multiqueues->deleteMax();
+            if (mode == 0)
+                multiqueues->insert(insertedNum);
+            else
+                multiqueues->deleteMax();
         } else if (threadData->mode == 1) {
-            multiqueues->deleteMaxByThreadId(threadData->threadId);
+            if (mode == 0)
+                multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+            else
+                multiqueues->deleteMaxByThreadId(threadData->threadId);
         } else {
-            multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+            if (mode == 0)
+                multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+            else
+                multiqueues->deleteMaxByThreadOwn(threadData->threadId);
         }
     }
-    printInfo("DELETE", threadData->threadId, start, DELETE_PER_THREAD);
+    printInfo("RANDOM", threadData->threadId, start, OPERATIONS_PER_THREAD);
 
     if (threadData->threadId == 0 && BALANCE) {
         start = __rdtsc();
@@ -85,8 +87,7 @@ int main(int argc, char *argv[]) {
     cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
     for (int numOfThreads = startThreads; numOfThreads < maxThreads; numOfThreads += 2) {
         for (int mode = 0; mode < 3; ++mode) {
-            long throughputDeleteSum = 0;
-            long throughputInsertSum = 0;
+            long throughputRandomSum = 0;
             cout << "-----------------------------------------------------------------" << endl;
             cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
                  << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
@@ -95,8 +96,7 @@ int main(int argc, char *argv[]) {
                 multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
                 pthread_t threads[multiqueues->numOfThreads];
                 struct threadData td[multiqueues->numOfThreads];
-                throughputsDelete = new long[multiqueues->numOfThreads];
-                throughputsInsert = new long[multiqueues->numOfThreads];
+                throughputsRandom = new long[multiqueues->numOfThreads];
                 for (int i = 0; i < multiqueues->numOfThreads; i++) {
                     td[i].threadId = i;
                     td[i].mode = mode;
@@ -116,18 +116,14 @@ int main(int argc, char *argv[]) {
 
                 for (int i = 0; i < numOfThreads; i++) {
                     pthread_join(threads[i], nullptr);
-                    throughputDeleteSum += throughputsDelete[i];
-                    throughputInsertSum += throughputsInsert[i];
+                    throughputRandomSum += throughputsRandom[i];
                 }
 
-
                 delete multiqueues;
-                delete throughputsDelete;
-                delete throughputsInsert;
+                delete throughputsRandom;
             }
 
-            cout << "[INSERT] SUM THROUGHPUT: " << throughputInsertSum / NUM_OF_EXPERIMENT << endl;
-            cout << "[DELETE] SUM THROUGHPUT: " << throughputDeleteSum / NUM_OF_EXPERIMENT << endl;
+            cout << "[RANDOM] SUM THROUGHPUT: " << throughputRandomSum / NUM_OF_EXPERIMENT << endl;
         }
         if (numOfThreads == 1) {
             numOfThreads = 0;
