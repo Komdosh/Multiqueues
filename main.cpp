@@ -1,9 +1,10 @@
 #include <iostream>
+#include <x86intrin.h>
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
 #define INSERT_PER_THREAD 1000000
-#define DELETE_PER_THREAD 500000
+#define DELETE_PER_THREAD 100000
 #define BALANCE 0
 #define CPU_FRQ 2.5E9
 #define CORES 4
@@ -16,13 +17,21 @@ struct threadData {
 };
 
 Multiqueues *multiqueues;
+long* throughputsInsert;
+long* throughputsDelete;
 
 void printInfo(const string &type, int threadId, uint64_t start, long numOfElement) {
     double secs = (__rdtsc() - start) / CPU_FRQ;
     //cout << "[" << type << "] Thread " << threadId << " finish in " << secs << " sec" << endl;
-    long throughput = static_cast<long>(numOfElement / secs);
+    auto throughput = static_cast<long>(numOfElement / secs);
     cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
          << " throughput per sec" << endl;
+    if(type == "DELETE"){
+        throughputsDelete[threadId]=throughput;
+    } else if(type == "INSERT"){
+        throughputsInsert[threadId]=throughput;
+    }
+
 }
 
 void *RunMultiqueueExperiment(void *threadarg) {
@@ -75,6 +84,8 @@ int main(int argc, char *argv[]) {
     multiqueues = new Multiqueues(numOfThreads, numOfQueuesPerThread);
     pthread_t threads[multiqueues->numOfThreads];
     struct threadData td[multiqueues->numOfThreads];
+    throughputsDelete = new long[multiqueues->numOfThreads];
+    throughputsInsert = new long[multiqueues->numOfThreads];
     for (int i = 0; i < multiqueues->numOfThreads; i++) {
         td[i].threadId = i;
         td[i].mode = 0;
@@ -92,10 +103,20 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    long throughputDeleteSum = 0;
+    long throughputInsertSum = 0;
+
     for (int i = 0; i < numOfThreads; i++) {
         pthread_join(threads[i], nullptr);
+        throughputDeleteSum += throughputsDelete[i];
+        throughputInsertSum += throughputsInsert[i];
     }
 
+    cout<<"SUM THROUGHPUT INSERT: "<<throughputInsertSum<<endl;
+    cout<<"SUM THROUGHPUT DELETE: "<<throughputDeleteSum<<endl;
+
     delete multiqueues;
+    delete throughputsDelete;
+    delete throughputsInsert;
     pthread_exit(nullptr);
 }
