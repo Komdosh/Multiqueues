@@ -1,4 +1,5 @@
 #include <iostream>
+#include <x86intrin.h>
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
@@ -6,7 +7,7 @@
 #define DELETE_PER_THREAD 500000
 #define BALANCE 0
 #define CPU_FRQ 1.8E9
-#define CORES 4
+#define CORES 24
 #define NUM_OF_QUEUES_PER_THREAD 2
 #define NUM_OF_EXPERIMENT 3
 
@@ -18,13 +19,21 @@ struct threadData {
 };
 
 Multiqueues *multiqueues;
+long *throughputsInsert;
+long *throughputsDelete;
 
 void printInfo(const string &type, int threadId, uint64_t start, long numOfElement) {
     double secs = (__rdtsc() - start) / CPU_FRQ;
     //cout << "[" << type << "] Thread " << threadId << " finish in " << secs << " sec" << endl;
     long throughput = static_cast<long>(numOfElement / secs);
-    cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
-         << " throughput per sec" << endl;
+/*    cout << "[" << type << "] Thread " << threadId << (threadId > 9 ? "" : " ") << " have " << throughput
+         << " throughput per sec" << endl;*/
+    if (type == "DELETE") {
+        throughputsDelete[threadId] = throughput;
+    } else if (type == "INSERT") {
+        throughputsInsert[threadId] = throughput;
+    }
+
 }
 
 void *RunMultiqueueExperiment(void *threadarg) {
@@ -74,18 +83,20 @@ int main(int argc, char *argv[]) {
     int startThreads = atoi(argv[1]);
     int maxThreads = atoi(argv[2]) + 1;
     cout << "[INFO START] Max threads " << maxThreads - 1 << endl;
-
     for (int numOfThreads = startThreads; numOfThreads < maxThreads; numOfThreads += 2) {
-        for (int mode = 1; mode < 3; ++mode) {
+        for (int mode = 0; mode < 3; ++mode) {
+            long throughputDeleteSum = 0;
+            long throughputInsertSum = 0;
+            cout << "-----------------------------------------------------------------" << endl;
+            cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
+                 << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
+                 << endl;
             for (int it = 0; it < NUM_OF_EXPERIMENT; ++it) {
-                cout << "-----------------------------------------------------------------" << endl;
-                cout << "[INFO] Num of threads " << numOfThreads << " | Num of queues per thread "
-                     << NUM_OF_QUEUES_PER_THREAD << " | mode " << mode
-                     << " | Iteration " << it
-                     << endl;
                 multiqueues = new Multiqueues(numOfThreads, NUM_OF_QUEUES_PER_THREAD);
                 pthread_t threads[multiqueues->numOfThreads];
                 struct threadData td[multiqueues->numOfThreads];
+                throughputsDelete = new long[multiqueues->numOfThreads];
+                throughputsInsert = new long[multiqueues->numOfThreads];
                 for (int i = 0; i < multiqueues->numOfThreads; i++) {
                     td[i].threadId = i;
                     td[i].mode = mode;
@@ -105,9 +116,18 @@ int main(int argc, char *argv[]) {
 
                 for (int i = 0; i < numOfThreads; i++) {
                     pthread_join(threads[i], nullptr);
+                    throughputDeleteSum += throughputsDelete[i];
+                    throughputInsertSum += throughputsInsert[i];
                 }
+
+
                 delete multiqueues;
+                delete throughputsDelete;
+                delete throughputsInsert;
             }
+
+            cout << "[INSERT] SUM THROUGHPUT: " << throughputInsertSum / NUM_OF_EXPERIMENT << endl;
+            cout << "[DELETE] SUM THROUGHPUT: " << throughputDeleteSum / NUM_OF_EXPERIMENT << endl;
         }
         if (numOfThreads == 1) {
             numOfThreads = 0;
