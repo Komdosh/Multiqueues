@@ -138,7 +138,7 @@ void Multiqueues::printSize() {
 
 void Multiqueues::balance() {
     int sumOfSizes = 0;
-    int sizes[this->numOfQueues] = {0};
+    int sizes[this->numOfQueues];
     int indexWithMax = 0, indexWithMin = 0;
     for (int i = 0; i < this->numOfQueues; ++i) {
         sizes[i] = internalQueues[i].size();

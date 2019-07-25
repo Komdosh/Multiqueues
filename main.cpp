@@ -1,5 +1,6 @@
 #include <iostream>
 #include <x86intrin.h>
+#include "cpu_helper.h"
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
@@ -82,11 +83,11 @@ int main(int argc, char *argv[]) {
     int numOfThreads = atoi(argv[1]);
     int numOfQueuesPerThread = atoi(argv[2]);
     multiqueues = new Multiqueues(numOfThreads, numOfQueuesPerThread);
-    pthread_t threads[multiqueues->numOfThreads];
-    struct threadData td[multiqueues->numOfThreads];
-    throughputsDelete = new long[multiqueues->numOfThreads];
-    throughputsInsert = new long[multiqueues->numOfThreads];
-    for (int i = 0; i < multiqueues->numOfThreads; i++) {
+    pthread_t threads[numOfThreads];
+    struct threadData td[numOfThreads];
+    throughputsDelete = new long[numOfThreads];
+    throughputsInsert = new long[numOfThreads];
+    for (int i = 0; i < numOfThreads; i++) {
         td[i].threadId = i;
         td[i].mode = 0;
         int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
