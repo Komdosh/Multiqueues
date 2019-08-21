@@ -59,7 +59,7 @@ int Multiqueues::deleteMax() {
 int Multiqueues::getTopValue(int queueIndex) const {
     int topValue = -1;
     if (!internalQueues[queueIndex].empty()) {
-        internalQueues[queueIndex].top();
+        topValue = internalQueues[queueIndex].top();
         internalQueues[queueIndex].pop();
     }
     locks[queueIndex].unlock();
