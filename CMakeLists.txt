@@ -7,7 +7,7 @@ SET(CMAKE_CXX_FLAGS -pthread)
 find_package(Boost 1.58.0 COMPONENTS filesystem REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
-    add_executable(Mutiqueues Multiqueues.cpp main.cpp)
+    add_executable(Mutiqueues main.cpp)
     target_link_libraries(Mutiqueues ${Boost_LIBRARIES})
 endif()
 

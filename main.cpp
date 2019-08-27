@@ -8,7 +8,7 @@
 #define DELETE_PER_THREAD 100000
 #define BALANCE 0
 #define CPU_FRQ 2.5E9
-#define CORES 4
+#define CORES 6
 
 using namespace std;
 
@@ -17,7 +17,7 @@ struct threadData {
     int mode;
 };
 
-Multiqueues *multiqueues;
+Multiqueues<int> *multiqueues;
 long* throughputsInsert;
 long* throughputsDelete;
 
@@ -46,19 +46,18 @@ void *RunMultiqueueExperiment(void *threadarg) {
         if (threadData->mode == 0) {
             multiqueues->insert(insertedNum);
         } else {
-            multiqueues->insertByThreadId(insertedNum, threadData->threadId);
+            multiqueues->insertByThreadId(insertedNum);
         }
     }
     printInfo("INSERT", threadData->threadId, start, INSERT_PER_THREAD);
-
     start = __rdtsc();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
         if (threadData->mode == 0) {
             multiqueues->deleteMax();
         } else if (threadData->mode == 1) {
-            multiqueues->deleteMaxByThreadId(threadData->threadId);
+            multiqueues->deleteMaxByThreadId();
         } else {
-            multiqueues->deleteMaxByThreadOwn(threadData->threadId);
+            multiqueues->deleteMaxByThreadOwn();
         }
     }
     printInfo("DELETE", threadData->threadId, start, DELETE_PER_THREAD);
@@ -68,7 +67,6 @@ void *RunMultiqueueExperiment(void *threadarg) {
         multiqueues->balance();
         printInfo("BALANCE", threadData->threadId, start, multiqueues->getSize());
     }
-
     pthread_exit(nullptr);
 }
 
@@ -82,14 +80,14 @@ int main(int argc, char *argv[]) {
 
     int numOfThreads = atoi(argv[1]);
     int numOfQueuesPerThread = atoi(argv[2]);
-    multiqueues = new Multiqueues(numOfThreads, numOfQueuesPerThread);
+    multiqueues = new Multiqueues<int>(numOfThreads, numOfQueuesPerThread);
     pthread_t threads[numOfThreads];
     struct threadData td[numOfThreads];
     throughputsDelete = new long[numOfThreads];
     throughputsInsert = new long[numOfThreads];
     for (int i = 0; i < numOfThreads; i++) {
         td[i].threadId = i;
-        td[i].mode = 0;
+        td[i].mode = 1;
         int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
         int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);
