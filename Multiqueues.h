@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <unordered_map>
+#include <map>
 
 template<typename T>
 class Multiqueues {
@@ -48,20 +49,10 @@ class Multiqueues {
         return queueIndex;
     }
 
-    int getRandomQueueIndexForHalf() const { return rand_r(this->seed) % (this->numOfQueues / 2); }
+    inline int getRandomQueueIndexForHalf() const { return rand_r(this->seed) % (this->numOfQueues / 2); }
 
 
-    int getRandomQueueIndex() const { return rand_r(this->seed) % this->numOfQueues; }
-
-    int getThreadId() {
-        std::__thread_id threadId = std::this_thread::get_id();
-        try {
-            return threadsMap.at(threadId);
-        } catch (...) {
-            threadsMap.insert(std::pair<std::__thread_id, size_t>(threadId, threadsMap.size()));
-            return threadsMap.at(threadId);
-        }
-    }
+    inline int getRandomQueueIndex() const { return rand_r(this->seed) % this->numOfQueues; }
 
     T getTopValue(const int queueIndex) const {
         int topValue = -1;
@@ -74,6 +65,12 @@ class Multiqueues {
     }
 
 public:
+
+    inline int getThreadId() {
+        std::thread::id threadId = std::this_thread::get_id();
+        std::hash<std::thread::id> hasher;
+        return hasher(threadId) % this->numOfThreads;
+    }
 
     Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
         this->numOfThreads = numOfThreads;

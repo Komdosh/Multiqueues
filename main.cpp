@@ -38,9 +38,9 @@ void printInfo(const string &type, int threadId, uint64_t start, long numOfEleme
 void *RunMultiqueueExperiment(void *threadarg) {
     struct threadData *threadData;
     threadData = (struct threadData *) threadarg;
+    unsigned int seed = 0;
     uint64_t start = __rdtsc();
 
-    unsigned int seed = 0;
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
         int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
         if (threadData->mode == 0) {
@@ -50,6 +50,7 @@ void *RunMultiqueueExperiment(void *threadarg) {
         }
     }
     printInfo("INSERT", threadData->threadId, start, INSERT_PER_THREAD);
+
     start = __rdtsc();
     for (int i = 0; i < DELETE_PER_THREAD; ++i) {
         if (threadData->mode == 0) {
