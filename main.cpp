@@ -38,9 +38,9 @@ void printInfo(const string &type, int threadId, uint64_t start, long numOfEleme
 void *RunMultiqueueExperiment(void *threadarg) {
     struct threadData *threadData;
     threadData = (struct threadData *) threadarg;
-    unsigned int seed = 0;
     uint64_t start = __rdtsc();
 
+    unsigned int seed = 0;
     for (int i = 0; i < INSERT_PER_THREAD; ++i) {
         int insertedNum = rand_r(&seed) % MAX_INSERTED_NUM;
         if (threadData->mode == 0) {
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     throughputsInsert = new long[numOfThreads];
     for (int i = 0; i < numOfThreads; i++) {
         td[i].threadId = i;
-        td[i].mode = 1;
+        td[i].mode = 2;
         int rc = pthread_create(&threads[i], nullptr, RunMultiqueueExperiment, (void *) &td[i]);
 
         int s = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset[i % CORES]);

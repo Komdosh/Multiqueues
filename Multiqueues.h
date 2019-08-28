@@ -8,8 +8,6 @@
 #include <mutex>
 #include <iostream>
 #include <thread>
-#include <unordered_map>
-#include <map>
 
 template<typename T>
 class Multiqueues {
@@ -20,7 +18,8 @@ class Multiqueues {
     typedef typename boost::heap::d_ary_heap<T, boost::heap::mutable_<true>, boost::heap::arity<2>> PriorityQueue;
     PriorityQueue *internalQueues;
     std::mutex *locks;
-    std::unordered_map<std::__thread_id, size_t> threadsMap;
+    std::thread::id *threadsMap;
+    int threadsMapSize = 0;
 
     int getQueIndexForDelete(int queueIndex, int secondQueueIndex) const {
         if (internalQueues[queueIndex].empty() && internalQueues[secondQueueIndex].empty()) {
@@ -51,7 +50,6 @@ class Multiqueues {
 
     inline int getRandomQueueIndexForHalf() const { return rand_r(this->seed) % (this->numOfQueues / 2); }
 
-
     inline int getRandomQueueIndex() const { return rand_r(this->seed) % this->numOfQueues; }
 
     T getTopValue(const int queueIndex) const {
@@ -64,18 +62,25 @@ class Multiqueues {
         return topValue;
     }
 
-public:
-
     inline int getThreadId() {
         std::thread::id threadId = std::this_thread::get_id();
-        std::hash<std::thread::id> hasher;
-        return hasher(threadId) % this->numOfThreads;
+        for (int i = 0; i < threadsMapSize; ++i) {
+            if (threadsMap[i] == threadId) {
+                return i;
+            }
+        }
+        threadsMap[threadsMapSize] = threadId;
+        ++threadsMapSize;
+        return threadsMapSize - 1;
     }
+
+public:
 
     Multiqueues(int numOfThreads, int numOfQueuesPerThread) {
         this->numOfThreads = numOfThreads;
         this->numOfQueuesPerThread = numOfQueuesPerThread;
         this->numOfQueues = numOfThreads * numOfQueuesPerThread;
+        this->threadsMap = new std::thread::id[numOfThreads];
         internalQueues = new PriorityQueue[numOfQueues];
         locks = new std::mutex[numOfQueues];
     }
