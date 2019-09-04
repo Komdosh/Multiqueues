@@ -1,7 +1,7 @@
 #ifdef __APPLE__ //specific for MacOS X
 #include <mach/mach_types.h>
 #include <mach/thread_act.h>
-#include <stdio.h>
+#include <cstdio>
 #include <pthread.h>
 
 typedef struct cpu_set {

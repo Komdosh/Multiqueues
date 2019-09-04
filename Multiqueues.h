@@ -1,8 +1,8 @@
 //
 // Created by komdosh on 4/7/18.
 //
-#ifndef MUTIQUEUES_MULTIQUEUES_H
-#define MUTIQUEUES_MULTIQUEUES_H
+#ifndef MULTIQUEUES_H
+#define MULTIQUEUES_H
 
 #include "boost/heap/d_ary_heap.hpp"
 #include <mutex>
@@ -21,7 +21,7 @@ class Multiqueues {
     std::thread::id *threadsMap;
     int threadsMapSize = 0;
 
-    int getQueIndexForDelete(int queueIndex, int secondQueueIndex) const {
+    int getQueueIndexForDelete(int queueIndex, int secondQueueIndex) const {
         if (internalQueues[queueIndex].empty() && internalQueues[secondQueueIndex].empty()) {
             return -1;
         } else if (internalQueues[queueIndex].empty() && !internalQueues[secondQueueIndex].empty()) {
@@ -125,7 +125,7 @@ public:
         do {
             queueIndex = getRandomQueueIndex();
             secondQueueIndex = getRandomQueueIndex();
-            queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
+            queueIndex = getQueueIndexForDelete(queueIndex, secondQueueIndex);
         } while (queueIndex == -1 || !locks[queueIndex].try_lock());
         return getTopValue(queueIndex);
     }
@@ -144,7 +144,7 @@ public:
                 secondQueueIndex = getRandomQueueIndexForHalf() + this->numOfQueues / 2;
             }
 
-            queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
+            queueIndex = getQueueIndexForDelete(queueIndex, secondQueueIndex);
         } while (queueIndex == -1 || !locks[queueIndex].try_lock());
         return getTopValue(queueIndex);
     }
@@ -164,7 +164,7 @@ public:
                 secondQueueIndex = getRandomQueueIndex();
             }
 
-            queueIndex = getQueIndexForDelete(queueIndex, secondQueueIndex);
+            queueIndex = getQueueIndexForDelete(queueIndex, secondQueueIndex);
         } while (queueIndex == -1 || !locks[queueIndex].try_lock());
         return getTopValue(queueIndex);
     }
@@ -214,4 +214,4 @@ public:
 
 };
 
-#endif //MUTIQUEUES_MULTIQUEUES_H
+#endif //MULTIQUEUES_H
