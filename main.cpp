@@ -5,12 +5,12 @@
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
-#define INSERT_ELEMENTS 1000000
-#define DELETE_ELEMENTS 500000
-#define RANDOM_ELEMENTS 400000
+#define INSERT_ELEMENTS 5000000
+#define DELETE_ELEMENTS 100000
+#define RANDOM_ELEMENTS 800000
 #define BALANCE 0
-#define CPU_FRQ 2.5E9
-#define CORES 6
+#define CPU_FRQ 4.35E9
+#define CORES 8
 #define REPEATS 5
 
 #define METHODS 3*3
@@ -292,14 +292,14 @@ void runThreads(const cpu_set_t *cpuset, int numOfThreads, int startThreads, con
     }
 }
 
-void runQueues(const cpu_set_t *cpuset, int numOfQueues, int startQueues, int queuesStep, const MultiqueueMode &mode) {
+void runQueues(const cpu_set_t *cpuset, int numOfThreads, int numOfQueues, int startQueues, int queuesStep, const MultiqueueMode &mode) {
     for (int queues = startQueues; queues < numOfQueues + 1; queues += queuesStep) {
         for (int repeat = 0; repeat < REPEATS; ++repeat) {
-            multiqueues = new Multiqueues<int>(CORES, queues);
-            pthread_barrier_init(&barrier, nullptr, CORES);
-            runExperiment(cpuset, CORES, queues, false, mode);
+            multiqueues = new Multiqueues<int>(numOfThreads, queues);
+            pthread_barrier_init(&barrier, nullptr, numOfThreads);
+            runExperiment(cpuset, numOfThreads, queues, false, mode);
             pthread_barrier_destroy(&barrier);
-            printCSVThroughputTable(repeat, numOfQueues, throughputByThread, true);
+            printCSVThroughputTable(repeat, numOfThreads, throughputByThread, true);
             printCSVThroughputTable(repeat, numOfQueues, throughputByQueue, false);
         }
     }
@@ -359,15 +359,15 @@ int main(int argc, char *argv[]) {
     }
 
     if (startModeQueues == 0) {
-        runQueues(cpuset, maxQueues, startThreads, queuesStep, ORIGINAL);
+        runQueues(cpuset, maxThreads, maxQueues, startQueues, queuesStep, ORIGINAL);
     }
 
     if (startModeQueues == 0 || startModeQueues == 1) {
-        runQueues(cpuset, maxQueues, startThreads, queuesStep, OPTIMIZED_HALF);
+        runQueues(cpuset, maxThreads, maxQueues, startQueues, queuesStep, OPTIMIZED_HALF);
     }
 
     if (startModeQueues == 0 || startModeQueues == 1 || startModeQueues == 2) {
-        runQueues(cpuset, maxQueues, startThreads, queuesStep, OPTIMIZED_EXACT);
+        runQueues(cpuset, maxThreads, maxQueues, startQueues, queuesStep, OPTIMIZED_EXACT);
     }
 
     pthread_exit(nullptr);
