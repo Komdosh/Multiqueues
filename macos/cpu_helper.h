@@ -15,10 +15,10 @@ static inline void
 CPU_SET(int num, cpu_set_t *cs) { cs->count |= (1 << num); }
 
 static inline int
-CPU_ISSET(int num, cpu_set_t *cs) { return (cs->count & (1 << num)); }
+CPU_ISSET(int num, const cpu_set_t *cs) { return (cs->count & (1 << num)); }
 
 int pthread_setaffinity_np(pthread_t thread, size_t cpu_size,
-                           cpu_set_t *cpu_set)
+                           const cpu_set_t *cpu_set)
 {
     thread_port_t mach_thread;
     int core = 0;
