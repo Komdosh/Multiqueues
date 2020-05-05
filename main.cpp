@@ -5,9 +5,9 @@
 #include "Multiqueues.h"
 
 #define MAX_INSERTED_NUM 1000000
-#define INSERT_ELEMENTS 5000000
-#define DELETE_ELEMENTS 100000
-#define RANDOM_ELEMENTS 800000
+#define INSERT_ELEMENTS 2000000
+#define DELETE_ELEMENTS 500000
+#define RANDOM_ELEMENTS 1000000
 #define BALANCE 0
 #define CPU_FRQ 4.35E9
 #define CORES 8
@@ -295,9 +295,9 @@ void runThreads(const cpu_set_t *cpuset, int numOfThreads, int startThreads, con
 void runQueues(const cpu_set_t *cpuset, int numOfThreads, int numOfQueues, int startQueues, int queuesStep, const MultiqueueMode &mode) {
     for (int queues = startQueues; queues < numOfQueues + 1; queues += queuesStep) {
         for (int repeat = 0; repeat < REPEATS; ++repeat) {
-            multiqueues = new Multiqueues<int>(numOfThreads, queues);
-            pthread_barrier_init(&barrier, nullptr, numOfThreads);
-            runExperiment(cpuset, numOfThreads, queues, false, mode);
+            multiqueues = new Multiqueues<int>(CORES, queues);
+            pthread_barrier_init(&barrier, nullptr, CORES);
+            runExperiment(cpuset, CORES, queues, false, mode);
             pthread_barrier_destroy(&barrier);
             printCSVThroughputTable(repeat, numOfThreads, throughputByThread, true);
             printCSVThroughputTable(repeat, numOfQueues, throughputByQueue, false);

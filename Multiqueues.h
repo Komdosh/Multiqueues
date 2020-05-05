@@ -17,7 +17,7 @@ class Multiqueues {
     unsigned int *seed = new unsigned int[1];
     typedef typename boost::heap::d_ary_heap<T, boost::heap::mutable_<true>, boost::heap::arity<2>> PriorityQueue;
     PriorityQueue *internalQueues;
-    std::mutex *locks;
+    std::timed_mutex *locks;
     std::thread::id *threadsMap;
     int threadsMapSize = 0;
 
@@ -82,7 +82,7 @@ public:
         this->numOfQueues = numOfThreads * numOfQueuesPerThread;
         this->threadsMap = new std::thread::id[numOfThreads];
         internalQueues = new PriorityQueue[numOfQueues];
-        locks = new std::mutex[numOfQueues];
+        locks = new std::timed_mutex[numOfQueues];
     }
 
     ~Multiqueues() {
@@ -153,12 +153,12 @@ public:
         const int threadId = getThreadId();
         int queueIndex;
         int secondQueueIndex;
-        int it = 0;
+        bool firstIteration = true;
         do {
-            if (!it) {
+            if (firstIteration) {
                 queueIndex = threadId * numOfQueuesPerThread;
                 secondQueueIndex = threadId * numOfQueuesPerThread + 1;
-                ++it;
+                firstIteration = false;
             } else {
                 queueIndex = getRandomQueueIndex();
                 secondQueueIndex = getRandomQueueIndex();
@@ -187,14 +187,18 @@ public:
         int averageSize = sumOfSizes / this->numOfQueues; //double is needless
         if (sizes[indexWithMax] > averageSize * 1.2) { // if max sized queue is 20% bigger and more than average
             while (!locks[indexWithMax].try_lock());
-            while (!locks[indexWithMin].try_lock());
-            int sizeOfTransfer = static_cast<int>(sizes[indexWithMax] * 0.3); // 30% elements transfer to smallest queue
-            for (int i = 0; i < sizeOfTransfer; ++i) {
-                internalQueues[indexWithMin].push(internalQueues[indexWithMax].top());
-                internalQueues[indexWithMax].pop();
+
+            if (locks[indexWithMin].try_lock_for(std::chrono::milliseconds(1000))) {
+                int sizeOfTransfer = static_cast<int>(sizes[indexWithMax] *
+                                                      0.3); // 30% elements transfer to smallest queue
+                for (int i = 0; i < sizeOfTransfer; ++i) {
+                    internalQueues[indexWithMin].push(internalQueues[indexWithMax].top());
+                    internalQueues[indexWithMax].pop();
+                }
+                locks[indexWithMin].unlock();
             }
+
             locks[indexWithMax].unlock();
-            locks[indexWithMin].unlock();
         }
     }
 
